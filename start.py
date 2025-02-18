@@ -28,27 +28,26 @@ bot = commands.Bot(command_prefix="!!", intents=intents)
 @bot.event
 async def on_ready():
     print(f"Bot connecté en tant que {bot.user}")
-# Fichier JSON pour stocker les informations économiques
-data_file = "economy_data.json"
+# Fonction pour récupérer ou créer un utilisateur dans MongoDB
+def get_user_data(user_id):
+    user_data = economy_collection.find_one({"user_id": user_id})
+    if user_data is None:
+        # Si l'utilisateur n'existe pas, créer un nouvel utilisateur
+        economy_collection.insert_one({
+            "user_id": user_id,
+            "cash": 0,
+            "bank": 0,
+            "total": 0
+        })
+        return {"cash": 0, "bank": 0, "total": 0}
+    return user_data
 
-# Charger les données des utilisateurs
-def load_data():
-    if os.path.exists(data_file):
-        with open(data_file, "r") as f:
-            return json.load(f)
-    else:
-        return {}
-
-# Sauvegarder les données des utilisateurs
-def save_data(data):
-    with open(data_file, "w") as f:
-        json.dump(data, f, indent=4)
-
-# Fonction pour obtenir les informations économiques d'un utilisateur
-def get_user_data(user_id, data):
-    if str(user_id) not in data:
-        data[str(user_id)] = {"cash": 0, "bank": 0, "total": 0}
-    return data[str(user_id)]
+# Fonction pour sauvegarder les données économiques de l'utilisateur dans MongoDB
+def save_user_data(user_id, user_data):
+    economy_collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"cash": user_data['cash'], "bank": user_data['bank'], "total": user_data['total']}}
+    )
 
 # Fonction pour créer un embed stylisé
 def create_embed(title, description, ctx):
@@ -64,9 +63,7 @@ def create_embed(title, description, ctx):
 # Commande pour afficher la balance de l'utilisateur
 @bot.command(name="balance")
 async def balance(ctx):
-    data = load_data()
-    user_data = get_user_data(ctx.author.id, data)
-
+    user_data = get_user_data(ctx.author.id)
     embed = create_embed(
         "💰 Votre Balance",
         f"💵 **Cash** : `{user_data['cash']}`\n"
@@ -80,14 +77,12 @@ async def balance(ctx):
 @bot.command(name="work")
 @commands.cooldown(1, 1800, commands.BucketType.user)  # 1800 secondes = 30 minutes
 async def work(ctx):
-    data = load_data()
-    user_data = get_user_data(ctx.author.id, data)
-
+    user_data = get_user_data(ctx.author.id)
     earned_money = random.randint(50, 200)
     user_data["cash"] += earned_money
     user_data["total"] = user_data["cash"] + user_data["bank"]
 
-    save_data(data)
+    save_user_data(ctx.author.id, user_data)
 
     embed = create_embed(
         "💼 Travail Réussi !",
@@ -109,8 +104,7 @@ async def work_error(ctx, error):
 # Commande pour déposer de l'argent à la banque (inclut "all")
 @bot.command(name="deposit")
 async def deposit(ctx, amount: str):
-    data = load_data()
-    user_data = get_user_data(ctx.author.id, data)
+    user_data = get_user_data(ctx.author.id)
 
     if amount.lower() == "all":
         amount = user_data["cash"]
@@ -129,7 +123,7 @@ async def deposit(ctx, amount: str):
     user_data["bank"] += amount
     user_data["total"] = user_data["cash"] + user_data["bank"]
 
-    save_data(data)
+    save_user_data(ctx.author.id, user_data)
 
     embed = create_embed("🏦 Dépôt Effectué", f"Vous avez déposé **{amount}** 💵 à la banque.", ctx)
     await ctx.send(embed=embed)
@@ -137,8 +131,7 @@ async def deposit(ctx, amount: str):
 # Commande pour retirer de l'argent de la banque (inclut "all")
 @bot.command(name="withdraw")
 async def withdraw(ctx, amount: str):
-    data = load_data()
-    user_data = get_user_data(ctx.author.id, data)
+    user_data = get_user_data(ctx.author.id)
 
     if amount.lower() == "all":
         amount = user_data["bank"]
@@ -157,10 +150,11 @@ async def withdraw(ctx, amount: str):
     user_data["bank"] -= amount
     user_data["total"] = user_data["cash"] + user_data["bank"]
 
-    save_data(data)
+    save_user_data(ctx.author.id, user_data)
 
     embed = create_embed("🏦 Retrait Effectué", f"Vous avez retiré **{amount}** 💵 de votre banque.", ctx)
     await ctx.send(embed=embed)
+
 # Lancement du bot
 keep_alive()
 bot.run(token)
