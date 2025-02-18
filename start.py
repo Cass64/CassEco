@@ -43,10 +43,15 @@ def get_user_data(user_id, data):
         data[str(user_id)] = {"cash": 0, "bank": 0, "total": 0}
     return data[str(user_id)]
 
-# Fonction pour créer un embed
-def create_embed(title, description, color, ctx):
-    embed = discord.Embed(title=title, description=description, color=color)
+# Fonction pour créer un embed stylisé
+def create_embed(title, description, ctx):
+    embed = discord.Embed(
+        title=f"**{title}**", 
+        description=f"**──────────**\n{description}\n**──────────**", 
+        color=discord.Color.red()
+    )
     embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url)
+    embed.set_footer(text="💰 Système Économique | Cass-Eco")
     return embed
 
 # Commande pour afficher la balance de l'utilisateur
@@ -55,14 +60,16 @@ async def balance(ctx):
     data = load_data()
     user_data = get_user_data(ctx.author.id, data)
 
-    embed = create_embed("💰 Votre balance", 
-                         f"💵 **Cash** : `{user_data['cash']}`\n"
-                         f"🏦 **Banque** : `{user_data['bank']}`\n"
-                         f"💰 **Total** : `{user_data['total']}`",
-                         discord.Color.gold(), ctx)
+    embed = create_embed(
+        "💰 Votre Balance",
+        f"💵 **Cash** : `{user_data['cash']}`\n"
+        f"🏦 **Banque** : `{user_data['bank']}`\n"
+        f"💰 **Total** : `{user_data['total']}`",
+        ctx
+    )
     await ctx.send(embed=embed)
 
-# Cooldown de 30 minutes pour la commande "work"
+# Commande "work" avec cooldown de 30 minutes
 @bot.command(name="work")
 @commands.cooldown(1, 1800, commands.BucketType.user)  # 1800 secondes = 30 minutes
 async def work(ctx):
@@ -75,17 +82,21 @@ async def work(ctx):
 
     save_data(data)
 
-    embed = create_embed("💼 Travail réussi !", 
-                         f"Vous avez travaillé et gagné **{earned_money}** 💵 !", 
-                         discord.Color.green(), ctx)
+    embed = create_embed(
+        "💼 Travail Réussi !",
+        f"Vous avez travaillé et gagné **{earned_money}** 💵 !",
+        ctx
+    )
     await ctx.send(embed=embed)
 
 @work.error
 async def work_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
-        embed = create_embed("⏳ Travail en attente", 
-                             f"Vous devez attendre encore **{round(error.retry_after / 60)} minutes** avant de retravailler.", 
-                             discord.Color.red(), ctx)
+        embed = create_embed(
+            "⏳ Travail en Attente",
+            f"Vous devez attendre encore **{round(error.retry_after / 60)} minutes** avant de retravailler.",
+            ctx
+        )
         await ctx.send(embed=embed)
 
 # Commande pour déposer de l'argent à la banque (inclut "all")
@@ -100,15 +111,11 @@ async def deposit(ctx, amount: str):
     try:
         amount = int(amount)
     except ValueError:
-        embed = create_embed("⚠️ Erreur", 
-                             "Veuillez entrer un montant valide.", 
-                             discord.Color.red(), ctx)
+        embed = create_embed("⚠️ Erreur", "Veuillez entrer un montant valide.", ctx)
         return await ctx.send(embed=embed)
 
     if amount <= 0 or amount > user_data["cash"]:
-        embed = create_embed("⚠️ Erreur", 
-                             "Vous n'avez pas assez d'argent en cash.", 
-                             discord.Color.red(), ctx)
+        embed = create_embed("⚠️ Erreur", "Vous n'avez pas assez d'argent en cash.", ctx)
         return await ctx.send(embed=embed)
 
     user_data["cash"] -= amount
@@ -117,9 +124,7 @@ async def deposit(ctx, amount: str):
 
     save_data(data)
 
-    embed = create_embed("🏦 Dépôt effectué", 
-                         f"Vous avez déposé **{amount}** 💵 à la banque.", 
-                         discord.Color.blue(), ctx)
+    embed = create_embed("🏦 Dépôt Effectué", f"Vous avez déposé **{amount}** 💵 à la banque.", ctx)
     await ctx.send(embed=embed)
 
 # Commande pour retirer de l'argent de la banque (inclut "all")
@@ -134,15 +139,11 @@ async def withdraw(ctx, amount: str):
     try:
         amount = int(amount)
     except ValueError:
-        embed = create_embed("⚠️ Erreur", 
-                             "Veuillez entrer un montant valide.", 
-                             discord.Color.red(), ctx)
+        embed = create_embed("⚠️ Erreur", "Veuillez entrer un montant valide.", ctx)
         return await ctx.send(embed=embed)
 
     if amount <= 0 or amount > user_data["bank"]:
-        embed = create_embed("⚠️ Erreur", 
-                             "Vous n'avez pas assez d'argent en banque.", 
-                             discord.Color.red(), ctx)
+        embed = create_embed("⚠️ Erreur", "Vous n'avez pas assez d'argent en banque.", ctx)
         return await ctx.send(embed=embed)
 
     user_data["cash"] += amount
@@ -151,9 +152,7 @@ async def withdraw(ctx, amount: str):
 
     save_data(data)
 
-    embed = create_embed("🏦 Retrait effectué", 
-                         f"Vous avez retiré **{amount}** 💵 de votre banque.", 
-                         discord.Color.blue(), ctx)
+    embed = create_embed("🏦 Retrait Effectué", f"Vous avez retiré **{amount}** 💵 de votre banque.", ctx)
     await ctx.send(embed=embed)
 # Lancement du bot
 keep_alive()
