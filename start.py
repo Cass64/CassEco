@@ -7,9 +7,16 @@ import random
 from keep_alive import keep_alive
 import json
 import asyncio
-
+import pymongo
+from pymongo import MongoClient
 
 load_dotenv()
+
+# Connexion à MongoDB via l'URI
+mongo_uri = os.getenv("MONGO_URI")
+client = MongoClient(mongo_uri)
+db = client['cassbot']  # Nom de la base de données
+economy_collection = db['economy']  # Nom de la collection pour stocker les données économiques
 
 
 token = os.getenv('TOKEN_BOT_DISCORD')
