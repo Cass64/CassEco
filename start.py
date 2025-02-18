@@ -15,7 +15,7 @@ load_dotenv()
 # Connexion à MongoDB via l'URI
 mongo_uri = os.getenv("MONGO_URI")
 client = MongoClient(mongo_uri)
-db = client['cassbot']  # Nom de la base de données
+db = client['Cass-Eco2']  # Nom de la base de données
 economy_collection = db['economy']  # Nom de la collection pour stocker les données économiques
 
 
