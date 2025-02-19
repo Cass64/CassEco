@@ -74,7 +74,33 @@ async def balance(ctx):
         ctx
     )
     await ctx.send(embed=embed)
+# Commande "work" avec cooldown de 30 minutes
+@bot.command(name="work")
+@commands.cooldown(1, 1800, commands.BucketType.user)  # 1800 secondes = 30 minutes
+async def work(ctx):
+    user_data = get_user_data(ctx.author.id)
+    earned_money = random.randint(50, 200)
+    user_data["cash"] += earned_money
+    user_data["total"] = user_data["cash"] + user_data["bank"]
 
+    save_user_data(ctx.author.id, user_data)
+
+    embed = create_embed(
+        "💼 Travail Réussi !",
+        f"Vous avez travaillé et gagné **{earned_money}** 💵 !",
+        ctx
+    )
+    await ctx.send(embed=embed)
+
+@work.error
+async def work_error(ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        embed = create_embed(
+            "⏳ Travail en Attente",
+            f"Vous devez attendre encore **{round(error.retry_after / 60)} minutes** avant de retravailler.",
+            ctx
+        )
+        await ctx.send(embed=embed)
 # Commande générique pour dépôt/retrait
 async def modify_balance(ctx, amount, transaction_type):
     user_data = get_user_data(ctx.author.id)
