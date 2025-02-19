@@ -1,5 +1,6 @@
 import os  
 from dotenv import load_dotenv
+from discord import app_commands
 import discord
 from discord.ext import commands
 from keep_alive import keep_alive
