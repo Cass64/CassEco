@@ -108,6 +108,7 @@ async def add_store(interaction: discord.Interaction, name: str, price: int, sto
     await interaction.response.send_message(embed=embed)
 
 
+
 @bot.command(name="item-buy")
 async def item_buy(ctx, *, item_name: str):
     user_data = get_user_data(ctx.author.id)
