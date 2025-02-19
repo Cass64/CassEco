@@ -136,16 +136,25 @@ async def add_store(interaction: discord.Interaction, name: str, price: int, sto
 async def item_buy(ctx, *, item_name: str):
     user_data = get_user_data(ctx.author.id)
     item = store_collection.find_one({"name": item_name})
-    if not item or item['stock'] <= 0:
-        return await ctx.send(embed=create_embed("❌ Erreur", "Objet non disponible."))
+
+    if not item:
+        return await ctx.send(embed=create_embed("❌ Erreur", "L'objet n'existe pas dans le store."))
+    if item['stock'] <= 0:
+        return await ctx.send(embed=create_embed("❌ Stock épuisé", f"L'objet **{item_name}** est en rupture de stock."))
     if user_data["cash"] < item['price']:
-        return await ctx.send(embed=create_embed("❌ Fonds insuffisants", "Retirez de la banque si besoin."))
+        return await ctx.send(embed=create_embed("❌ Fonds insuffisants", "Vous n'avez pas assez d'argent pour cet achat."))
+
+    # Mise à jour de l'utilisateur et du stock
     user_data["cash"] -= item['price']
     user_data["total"] = user_data["cash"] + user_data["bank"]
     user_data["inventory"].append(item_name)
     save_user_data(ctx.author.id, user_data)
+
+    # Mise à jour du stock
     store_collection.update_one({"name": item_name}, {"$inc": {"stock": -1}})
-    await ctx.send(embed=create_embed("✅ Achat Réussi", f"Vous avez acheté **{item_name}** !"))
+    
+    await ctx.send(embed=create_embed("✅ Achat Réussi", f"Vous avez acheté **{item_name}** pour **{item['price']} 💵** !"))
+
 
 @bot.command(name="item-inventory")
 async def item_inventory(ctx):
