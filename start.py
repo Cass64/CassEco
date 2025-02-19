@@ -51,6 +51,29 @@ async def on_ready():
     await bot.tree.sync()
     print(f"Bot connecté en tant que {bot.user}")
 
+# Dépôt et retrait
+deposit_withdraw_commands = {"deposit": "déposé", "withdraw": "retiré"}
+for cmd, action in deposit_withdraw_commands.items():
+    @bot.command(name=cmd)
+    async def transaction(ctx, amount: str, transaction_type=cmd, action=action):
+        user_data = get_user_data(ctx.author.id)
+        if amount.lower() == "all":
+            amount = user_data["cash"] if transaction_type == "deposit" else user_data["bank"]
+        try:
+            amount = int(amount)
+        except ValueError:
+            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant invalide."))
+
+        if amount <= 0 or (transaction_type == "deposit" and amount > user_data["cash"]) or (transaction_type == "withdraw" and amount > user_data["bank"]):
+            return await ctx.send(embed=create_embed("⚠️ Erreur", "Montant incorrect."))
+
+        user_data["cash"] -= amount if transaction_type == "deposit" else -amount
+        user_data["bank"] += amount if transaction_type == "deposit" else -amount
+        user_data["total"] = user_data["cash"] + user_data["bank"]
+        save_user_data(ctx.author.id, user_data)
+
+        await ctx.send(embed=create_embed("🏦 Transaction réussie", f"Vous avez {action} `{amount}` 💵."))
+        
 @bot.command(name="balance")
 async def balance(ctx):
     user_data = get_user_data(ctx.author.id)
