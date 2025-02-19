@@ -47,6 +47,7 @@ def create_embed(title, description, color=discord.Color.green()):
 
 @bot.event
 async def on_ready():
+    await bot.tree.sync()
     print(f"Bot connecté en tant que {bot.user}")
 
 @bot.command(name="balance")
@@ -86,11 +87,25 @@ async def store(ctx):
     desc = "\n".join([f"**{item['name']}** - {item['price']} 💵 ({item['stock']} en stock)\n_{item['description']}_" for item in items])
     await ctx.send(embed=create_embed("🏪 Boutique", desc))
 
-@bot.command(name="add-store")
-@commands.has_role(".Destiny")
-async def add_store(ctx, name: str, price: int, stock: int, *, description: str):
+@bot.tree.command(name="add-store", description="Ajoute un objet dans le store (réservé au rôle .Destiny)")
+@app_commands.checks.has_role(".Destiny")
+@app_commands.describe(
+    name="Nom de l'objet",
+    price="Prix de l'objet",
+    stock="Quantité disponible",
+    description="Description de l'objet"
+)
+async def add_store(interaction: discord.Interaction, name: str, price: int, stock: int, description: str):
     store_collection.insert_one({"name": name, "price": price, "stock": stock, "description": description})
-    await ctx.send(embed=create_embed("✅ Ajouté !", f"**{name}** ajouté au store."))
+    
+    embed = discord.Embed(
+        title="✅ Objet ajouté !",
+        description=f"**{name}** a été ajouté au store.\n💰 Prix: `{price}`\n📦 Stock: `{stock}`\n📝 {description}",
+        color=discord.Color.green()
+    )
+    
+    await interaction.response.send_message(embed=embed)
+
 
 @bot.command(name="item-buy")
 async def item_buy(ctx, *, item_name: str):
