@@ -10,6 +10,7 @@ import asyncio
 import pymongo
 from pymongo import MongoClient
 import datetime
+import math
 
 load_dotenv()
 
@@ -136,20 +137,64 @@ async def daily(ctx):
     save_user_data(ctx.author.id, user_data)
     await ctx.send(embed=create_embed("🎁 Récompense Quotidienne", f"Vous avez reçu **{reward}** 💵 ! Revenez demain.", ctx))
 
+# Fonction pour créer un embed de leaderboard
+def create_leaderboard_embed(page, users, ctx):
+    description = ""
+    start_index = (page - 1) * 10  # Calculer l'index de départ
+    end_index = start_index + 10  # Limiter à 10 utilisateurs par page
+
+    # Générer la description des utilisateurs pour la page donnée
+    for i, user in enumerate(users[start_index:end_index]):
+        member = await bot.fetch_user(int(user["user_id"]))
+        description += f"**#{start_index + i + 1}** {member.name} - 💰 `{user['total']}`\n"
+    
+    embed = discord.Embed(
+        title="🏆 Classement Économique",
+        description=description or "Aucun utilisateur enregistré.",
+        color=discord.Color.green()
+    )
+    embed.set_footer(text=f"Page {page}/{math.ceil(len(users) / 10)}")  # Afficher le numéro de page actuel
+    return embed
+    
 # Commande pour afficher le classement économique
 @bot.command(name="leaderboard")
-async def leaderboard(ctx):
-    top_users = economy_collection.find().sort("total", -1).limit(5)
-    description = ""
-    position = 1
-    for user in top_users:
-        member = await bot.fetch_user(int(user["user_id"]))
-        description += f"**#{position}** {member.name} - 💰 `{user['total']}`\n"
-        position += 1
-    
-    embed = create_embed("🏆 Classement Économique", description or "Aucun utilisateur enregistré.", ctx)
-    await ctx.send(embed=embed)
+async def leaderboard(ctx, page: int = 1):
+    # Récupérer tous les utilisateurs triés par total
+    all_users = list(economy_collection.find().sort("total", -1))
 
+    # S'assurer que la page est valide
+    if page < 1 or page > math.ceil(len(all_users) / 10):
+        return await ctx.send(embed=create_embed("⚠️ Erreur", "Page invalide.", ctx))
+
+    # Créer et envoyer l'embed de leaderboard pour la page spécifiée
+    embed = await create_leaderboard_embed(page, all_users, ctx)
+    leaderboard_message = await ctx.send(embed=embed)
+
+    # Ajouter des réactions pour naviguer entre les pages
+    await leaderboard_message.add_reaction("⬅️")
+    await leaderboard_message.add_reaction("➡️")
+
+    # Fonction pour gérer les réactions
+    def check(reaction, user):
+        return user != bot.user and str(reaction.emoji) in ["⬅️", "➡️"] and reaction.message.id == leaderboard_message.id
+
+    try:
+        while True:
+            reaction, user = await bot.wait_for("reaction_add", check=check, timeout=60)  # Timeout de 60 secondes pour les réactions
+            if str(reaction.emoji) == "⬅️" and page > 1:
+                page -= 1
+            elif str(reaction.emoji) == "➡️" and page < math.ceil(len(all_users) / 10):
+                page += 1
+
+            # Mettre à jour l'embed avec la nouvelle page
+            embed = await create_leaderboard_embed(page, all_users, ctx)
+            await leaderboard_message.edit(embed=embed)
+
+            # Enlever la réaction de l'utilisateur
+            await leaderboard_message.remove_reaction(reaction, user)
+
+    except asyncio.TimeoutError:
+        await leaderboard_message.clear_reactions()
 # Lancement du bot
 keep_alive()
 bot.run(token)
