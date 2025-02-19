@@ -1,4 +1,14 @@
-
+import os  
+from dotenv import load_dotenv
+import discord
+from discord import app_commands
+from discord.ext import commands
+import random
+from keep_alive import keep_alive
+import json
+import asyncio
+import pymongo
+from pymongo import MongoClient
 
 load_dotenv()
 
