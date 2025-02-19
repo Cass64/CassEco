@@ -137,8 +137,8 @@ async def daily(ctx):
     save_user_data(ctx.author.id, user_data)
     await ctx.send(embed=create_embed("🎁 Récompense Quotidienne", f"Vous avez reçu **{reward}** 💵 ! Revenez demain.", ctx))
 
-# Fonction pour créer un embed de leaderboard
-def create_leaderboard_embed(page, users, ctx):
+# Fonction pour créer un embed de leaderboard 
+async def create_leaderboard_embed(page, users, ctx):
     description = ""
     start_index = (page - 1) * 10  # Calculer l'index de départ
     end_index = start_index + 10  # Limiter à 10 utilisateurs par page
@@ -195,6 +195,7 @@ async def leaderboard(ctx, page: int = 1):
 
     except asyncio.TimeoutError:
         await leaderboard_message.clear_reactions()
+
 # Lancement du bot
 keep_alive()
 bot.run(token)
